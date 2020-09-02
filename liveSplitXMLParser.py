@@ -10,6 +10,8 @@ def main():
     timeSave = []
     pbSplitTime = []
     bestSplitTime = []
+    segAttempt = []
+    percentReset = []
 
     #reading the data inside teh xml file to a variable under the name data
     #fileName = "Super Mario 64 - 16 Star.lss"
@@ -32,11 +34,28 @@ def main():
     prevSegTime = 0 #storing the previous segment time to calc current segment time
     sumOfBest = 0 #sum of best time in seconds
     attemptCount = int(root[5].text) #get the total number of attemps
+    segAttemptCount = 0 #store the number of completed attempts for each split
 
     #count the number of segments in the file
     for i in range(0,len(data)):
         if(data[i:i+9] == "<Segment>"):
             segmentCount+=1
+            if(segAttemptCount != 0): #to prevent the first instance of segment to add a zero to the start
+                segAttempt.append(segAttemptCount)
+                segAttemptCount = 0
+        if(data[i:i+5] == "<Time"):
+            segAttemptCount+=1
+    segAttempt.append(segAttemptCount) #to add the last split since no Segment tag following
+
+    #calculate reset percentage for each split
+    for r in range(0, segmentCount):
+        resetPercent = 0
+        if(r == 0):
+            resetPercent = (attemptCount-segAttempt[r])/attemptCount
+        else:
+            resetPercent = (segAttempt[r-1]-segAttempt[r])/attemptCount
+
+        percentReset.append(round_up(resetPercent*100, 3))
             
     print("Total Attempts:",attemptCount)
     print("Total Number of Segments:", segmentCount)
@@ -65,10 +84,12 @@ def main():
         bestSplitTime.append(bestSeg)
         
         print("Segment Name: " + root[7][x][0].text)
-        print("\tBest Time:",bestSeg)
-        print("\tPB Time:",currSegTime)
+        print("\tBest Time:", bestSeg)
+        print("\tPB Time:", currSegTime)
         print("\tTime Save:", segTimeSave)
         print("\t% Time Save:", percentTimeSave, "%")
+        print("\tCompleted Attempts:", segAttempt[x])
+        print("\t% of Reset:", percentReset[x], "%")
         
         prevSegTime = pbSeg
 
@@ -85,8 +106,15 @@ def main():
 
     data = (bestValues, pbValues)
 
+    #display the PB run time
+    singleScatterPlotDisplay(segNames, pbSplitTime, "PB Run Time", "Segments", "Time")
+    #display the best run time
+    singleScatterPlotDisplay(segNames, bestSplitTime, "Best Run Time", "Segments", "Time")
+    #display the percentage of time save throughout the Run
     pieChartDisplay(segNames, timeSave, "Percentage Time Save")
-    singleScatterPlotDisplay(segNames, bestSplitTime, "Run Time", "Segments", "Time")
+    #display the percentage of time resets occur
+    pieChartDisplay(segNames, percentReset, "Percentage Reset")
+    #display the best splits vs the PB splits on the same plot
     #multipleScatterPlotDisplay(data, ("yellow", "blue"), ("Best", "PB"), "Best vs PB Comparison", "Segments", "Time")
 
 #convert the time as a string into the number of seconds as an int
@@ -120,6 +148,10 @@ def pieChartDisplay(labels, values, title):
     plt.title(title)
     plt.show()
 
+    #reverse the lists back to original
+    values.reverse()
+    labels.reverse()
+
 #display one set of data points as a scatterplot
 def singleScatterPlotDisplay(labels, values, title, xLab, yLab):
     plt.scatter(labels, values) #put the points on the plot
@@ -127,6 +159,7 @@ def singleScatterPlotDisplay(labels, values, title, xLab, yLab):
     plt.title(title)
     plt.xlabel(xLab)
     plt.ylabel(yLab)
+    
     plt.show()
 
 #display multiple groups of data on one scatterplot
